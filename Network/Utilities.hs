@@ -65,4 +65,6 @@ getString' key  = value2String . definite' key
 -- custom postWith that overrides default checkStatus functionality.
 -- no longer returns an error on non-2** status codes.
 postWith' :: (String -> [FormParam] -> IO (Response BS.ByteString) )
-postWith' = postWith (set checkStatus (Just $ \_ _ _ -> Nothing) defaults)
+postWith' = postWith defaults'
+
+defaults' = set checkStatus (Just $ \_ _ _ -> Nothing) defaults

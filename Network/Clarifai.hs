@@ -29,7 +29,7 @@ data Client = Client String | App String String deriving (Show)
 
 -- Turn our authorized Client into an Authorization header
 authHeader :: Client -> Options
-authHeader (Client token) = defaults & header "Authorization" .~ [packed]
+authHeader (Client token) = defaults' & header "Authorization" .~ [packed]
   where auth = "Bearer " ++ token
         packed = BStrict.pack auth
 authHeader _ = defaults
