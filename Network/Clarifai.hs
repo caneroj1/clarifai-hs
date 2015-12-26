@@ -17,6 +17,7 @@ import           Data.Either
 import qualified Data.Map.Lazy              as Map
 import qualified Data.Text                  as T
 import qualified Network.HTTP.Client        as Net
+import           Network.Utilities
 import           Network.Wreq
 
 -- The Client data type has two constructors. The first should be used
@@ -30,7 +31,6 @@ type Url = String
 -- needed?
 type ApiResponse = Response (Map.Map String Value)
 
-type Resp = Response BS.ByteString
 type Errors = (Int, String)
 
 -- API Routes
@@ -48,25 +48,12 @@ authorize (App clientID clientSecret) = resp
   where authParams = ["client_id" := clientID,
                       "client_secret" := clientSecret,
                       "grant_type" := BS.pack "client_credentials"]
-        handler (Net.StatusCodeException s _ _) = return (Left (code, msg))
-          where code = s ^. statusCode
-                msg = s ^. statusMessage
         resp = do (status, body) <- processRequest $ postWith' tokenUrl authParams
                   let code = status ^. statusCode in
                     if code /= 200 then
-                      return (Left (code, show $ status ^. statusMessage))
+                      return (Left (code, T.unpack $ authErr code body))
                     else
                       return (Right (Client $ body ^. key "access_token" . _String))
-
--- Process the results of a request
--- Returns an IO Tuple of the status and response body.
-processRequest :: IO Resp -> IO (Status, BS.ByteString)
-processRequest response = do  r <- response
-                              return (r ^. responseStatus, r ^. responseBody)
-
--- custom postWith that overrides default checkStatus functionality.
--- no longer returns an error on non-2** status codes.
-postWith' = postWith (set checkStatus (Just $ \_ _ _ -> Nothing) defaults)
 
 -- Turn our authorized Client into an Authorization header
 clientToAuthHeader :: Client -> Options
