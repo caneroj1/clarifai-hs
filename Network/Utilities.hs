@@ -6,6 +6,7 @@ import           Control.Lens
 import           Data.Aeson
 import           Data.Aeson.Lens
 import qualified Data.ByteString.Lazy.Char8 as BS
+import qualified Data.HashMap.Lazy          as Hash
 import qualified Data.Map.Lazy              as Map
 import           Data.Maybe
 import           Data.Scientific
@@ -14,6 +15,7 @@ import           Network.Wreq
 
 type Resp = Response BS.ByteString
 type Obj = Map.Map String Value
+type HObj = Hash.HashMap T.Text Value
 type JSON = Response Obj
 type Errors = (Int, String)
 
@@ -29,24 +31,36 @@ apiErr code body
   | code == 401 = getString "status_msg" body
   | code == 400 = getString "error"      body
 
--- Gets a value from a map that we know exists
+-- Gets a value that we know exists from a map
 definite :: String -> Obj -> Value
 definite k m = fromJust $ Map.lookup k m
+
+-- Gets a value that we know exists from a hash map
+definite' :: String -> HObj -> Value
+definite' k m = fromJust $ Hash.lookup (T.pack k) m
 
 -- Convert an Aeson value into a String
 value2String :: Value -> String
 value2String (String xs) = T.unpack xs
 value2String _ = ""
 
--- Convert an Aeson value into an Int(eger?)
+-- Convert an Aeson value into an Integer
 value2Int :: Value -> Integer
 value2Int (Number x) = coefficient x
 value2Int _ = 0
 
+-- Convert an Aeson value into a hash map
+value2Map :: Value -> HObj
+value2Map (Object o) = o
+value2Map _ = Hash.empty
+
 -- Composes the definite and value2* functions into
 -- a single function that gets and converts from a map.
-getInt key    = value2Int . definite key
-getString key = value2String . definite key
+getInt key      = value2Int . definite key
+getString key   = value2String . definite key
+getMap key      = value2Map . definite key
+getInt' key     = value2Int . definite' key
+getString' key  = value2String . definite' key
 
 -- custom postWith that overrides default checkStatus functionality.
 -- no longer returns an error on non-2** status codes.

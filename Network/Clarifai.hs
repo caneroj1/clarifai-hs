@@ -27,6 +27,13 @@ import           Network.Wreq
 -- should be used when passing in an application's client id and client secret.
 data Client = Client String | App String String deriving (Show)
 
+-- Turn our authorized Client into an Authorization header
+authHeader :: Client -> Options
+authHeader (Client token) = defaults & header "Authorization" .~ [packed]
+  where auth = "Bearer " ++ token
+        packed = BStrict.pack auth
+authHeader _ = defaults
+
 -- The Info data type is used as a response from the
 -- /info endpoint. This type contains information about the
 -- various usage limits for the API.
@@ -42,17 +49,19 @@ data Info = Info {
   maxVideoDuration  :: Integer
 } deriving (Show)
 
+-- Convert a Map of Strings and Values into an Info type
 toInfo :: Obj -> Info
-toInfo obj = Info mbs maxis minis maxib mvbs maxvs minvs mvb mvd
-  where mbs   = getInt "max_batch_size"       obj
-        maxis = getInt "max_image_size"       obj
-        minis = getInt "min_image_size"       obj
-        maxib = getInt "max_image_bytes"      obj
-        mvbs  = getInt "max_video_batch_size" obj
-        maxvs = getInt "max_video_size"       obj
-        minvs = getInt "min_video_size"       obj
-        mvb   = getInt "max_video_bytes"      obj
-        mvd   = getInt "max_video_duration"   obj
+toInfo origObj = Info mbs maxis minis maxib mvbs maxvs minvs mvb mvd
+  where obj = getMap "results" origObj
+        mbs   = getInt' "max_batch_size"       obj
+        maxis = getInt' "max_image_size"       obj
+        minis = getInt' "min_image_size"       obj
+        maxib = getInt' "max_image_bytes"      obj
+        mvbs  = getInt' "max_video_batch_size" obj
+        maxvs = getInt' "max_video_size"       obj
+        minvs = getInt' "min_video_size"       obj
+        mvb   = getInt' "max_video_bytes"      obj
+        mvd   = getInt' "max_video_duration"   obj
 
 --------------------
 ---- API Routes ----
@@ -87,17 +96,11 @@ authorize (App clientID clientSecret) = resp
 -- the results into an Info type.
 info :: Client -> IO (Either Errors Info)
 info (App _ _) = return (Left (0, "You have not authorized your app yet."))
-info client = return (Left (0, "You have not authorized your app yet."))
-  where resp = do (status, body) <- processRequest $ getWith (authHeader client) infoUrl
+info client = resp
+  where opts = authHeader client
+        resp = do (status, body) <- processRequest $ getWith opts infoUrl
                   let code = status ^. statusCode in
                     if code /= 200 then
                       return (Left (code, apiErr code body))
                     else
                       return (Right (toInfo body))
-
--- Turn our authorized Client into an Authorization header
-authHeader :: Client -> Options
-authHeader (Client token) = defaults & header "Authorization" .~ [packed]
-  where auth = "Bearer " ++ token
-        packed = BStrict.pack auth
-authHeader _ = defaults
