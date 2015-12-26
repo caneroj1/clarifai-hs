@@ -3,7 +3,9 @@
 module Network.Clarifai
   (
     Client(..),
-    authorize
+    Info(..),
+    authorize,
+    info
   ) where
 
 import qualified Control.Exception          as E
@@ -23,18 +25,42 @@ import           Network.Wreq
 -- The Client data type has two constructors. The first should be used
 -- when constructing a client with an access token. The second constructor
 -- should be used when passing in an application's client id and client secret.
-data Client = Client T.Text | App String String deriving (Show)
+data Client = Client String | App String String deriving (Show)
 
--- needed?
-type Url = String
+-- The Info data type is used as a response from the
+-- /info endpoint. This type contains information about the
+-- various usage limits for the API.
+data Info = Info {
+  maxBatchSize      :: Integer,
+  maxImageSize      :: Integer,
+  minImageSize      :: Integer,
+  maxImageBytes     :: Integer,
+  maxVideoBatchSize :: Integer,
+  maxVideoSize      :: Integer,
+  minVideoSize      :: Integer,
+  maxVideoBytes     :: Integer,
+  maxVideoDuration  :: Integer
+} deriving (Show)
 
--- needed?
-type ApiResponse = Response (Map.Map String Value)
+toInfo :: Obj -> Info
+toInfo obj = Info mbs maxis minis maxib mvbs maxvs minvs mvb mvd
+  where mbs   = getInt "max_batch_size"       obj
+        maxis = getInt "max_image_size"       obj
+        minis = getInt "min_image_size"       obj
+        maxib = getInt "max_image_bytes"      obj
+        mvbs  = getInt "max_video_batch_size" obj
+        maxvs = getInt "max_video_size"       obj
+        minvs = getInt "min_video_size"       obj
+        mvb   = getInt "max_video_bytes"      obj
+        mvd   = getInt "max_video_duration"   obj
 
-type Errors = (Int, String)
-
--- API Routes
+--------------------
+---- API Routes ----
+--------------------
+-- For authentication
 tokenUrl = "https://api.clarifai.com/v1/token/"
+-- For API info
+infoUrl  = "https://api.clarifai.com/v1/info/"
 
 -- Authorize an application
 -- Sends a POST request to Clarifai's authentication endpoint.
@@ -45,20 +71,33 @@ tokenUrl = "https://api.clarifai.com/v1/token/"
 authorize :: Client -> IO (Either Errors Client)
 authorize (Client token) = return (Right (Client token))
 authorize (App clientID clientSecret) = resp
-  where authParams = ["client_id" := clientID,
+  where params = ["client_id" := clientID,
                       "client_secret" := clientSecret,
                       "grant_type" := BS.pack "client_credentials"]
-        resp = do (status, body) <- processRequest $ postWith' tokenUrl authParams
+        key = "access_token"
+        resp = do (status, body) <- processRequest $ postWith' tokenUrl params
                   let code = status ^. statusCode in
                     if code /= 200 then
-                      return (Left (code, T.unpack $ authErr code body))
+                      return (Left (code, apiErr code body))
                     else
-                      return (Right (Client $ body ^. key "access_token" . _String))
+                      return (Right (Client $ getString key body))
+
+-- Gets the Clarifai API limits and information.
+-- Sends a get request to the /info endpoint and encapsulates
+-- the results into an Info type.
+info :: Client -> IO (Either Errors Info)
+info (App _ _) = return (Left (0, "You have not authorized your app yet."))
+info client = return (Left (0, "You have not authorized your app yet."))
+  where resp = do (status, body) <- processRequest $ getWith (authHeader client) infoUrl
+                  let code = status ^. statusCode in
+                    if code /= 200 then
+                      return (Left (code, apiErr code body))
+                    else
+                      return (Right (toInfo body))
 
 -- Turn our authorized Client into an Authorization header
-clientToAuthHeader :: Client -> Options
-clientToAuthHeader (Client token) = defaults & header "Authorization" .~ [packed]
-  where unpacked = T.unpack token
-        auth = "Bearer " ++ unpacked
+authHeader :: Client -> Options
+authHeader (Client token) = defaults & header "Authorization" .~ [packed]
+  where auth = "Bearer " ++ token
         packed = BStrict.pack auth
-clientToAuthHeader _ = defaults
+authHeader _ = defaults
