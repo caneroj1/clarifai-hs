@@ -3,7 +3,10 @@
 module Network.Clarifai
   (
     Client(..),
-    Info(..),
+    -- TagSet,
+    verifyImageBatchSize,
+    verifyVideoBatchSize,
+    verifyFiles,
     authorize,
     info
   ) where
@@ -16,11 +19,14 @@ import qualified Data.ByteString            as BL
 import qualified Data.ByteString.Char8      as BStrict
 import qualified Data.ByteString.Lazy.Char8 as BS
 import           Data.Either
+import           Data.List
 import qualified Data.Map.Lazy              as Map
 import qualified Data.Text                  as T
+import           Network.HTTP
 import qualified Network.HTTP.Client        as Net
 import           Network.Utilities
 import           Network.Wreq
+import           System.EasyFile
 
 -- The Client data type has two constructors. The first should be used
 -- when constructing a client with an access token. The second constructor
@@ -104,3 +110,36 @@ info client = resp
                       return (Left (code, apiErr code body))
                     else
                       return (Right (toInfo body))
+
+-- Given an API Info type and a list of FilePaths, we verify each of the files.
+-- If the file has an extension, we decide which Info attribute to use
+-- to verify the file. If it has no extension, we choose not to verify. This
+-- function maps each FilePath to a tuple of (FilePath, VerificationStatus),
+-- where VerificationStatus = Good | Bad | Unknown
+verifyFiles :: Info -> [FilePath] -> IO [(FilePath, IO VerificationStatus)]
+verifyFiles info fs = do
+  let zipped = zip fs (map getFileSize fs)
+  return (map (verify info) zipped)
+  where verify (Info _ mxi mni _ _ mxv mnv _ _) (path, ioSize)
+          | ext `elem` imageExtensions = (path, fmap imgC ioSize)
+          | ext `elem` videoExtensions = (path, fmap vidC ioSize)
+          | otherwise = (path, return Unknown)
+          where ext = takeExtension path
+                vidC = fileCheck (mnv, mxv)
+                imgC = fileCheck (mni, mxi)
+
+-- Given an API Info type and a list of FilePaths, we verify
+-- the length of the list with what the Info type specifies is
+-- acceptable batch size for images. This function assumes that
+-- the FilePaths all point to images.
+verifyImageBatchSize :: Info -> [FilePath] -> Bool
+verifyImageBatchSize (Info size _ _ _ _ _ _ _ _) xs = size >= conv
+  where conv = fromIntegral (length xs) :: Integer
+
+-- Given an API Info type and a list of FilePaths, we verify
+-- the length of the list with what the Info type specifies is
+-- acceptable batch size for videos. This function assumes that
+-- the FilePaths all point to videos.
+verifyVideoBatchSize :: Info -> [FilePath] -> Bool
+verifyVideoBatchSize (Info _ _ _ _ size _ _ _ _) xs = size >= conv
+  where conv = fromIntegral (length xs) :: Integer

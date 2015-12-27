@@ -11,6 +11,7 @@ import qualified Data.Map.Lazy              as Map
 import           Data.Maybe
 import           Data.Scientific
 import qualified Data.Text                  as T
+import           Data.Word
 import           Network.Wreq
 
 type Resp = Response BS.ByteString
@@ -18,6 +19,9 @@ type Obj = Map.Map String Value
 type HObj = Hash.HashMap T.Text Value
 type JSON = Response Obj
 type Errors = (Int, String)
+
+-- Enum type for verifying FilePaths before sending to the API.
+data VerificationStatus = Good | Bad | Unknown
 
 -- Process the results of a request into JSON
 -- Returns an IO Tuple of the status and response body.
@@ -68,3 +72,21 @@ postWith' :: (String -> [FormParam] -> IO (Response BS.ByteString) )
 postWith' = postWith defaults'
 
 defaults' = set checkStatus (Just $ \_ _ _ -> Nothing) defaults
+
+-- List of extensions for videos. If a file has one of these extensions
+-- we use the video Info from the API to verify the file.
+videoExtensions = [".mov", ".webm", ".ogv", ".ogg", ".wmv", ".mp4",
+                   ".m4p", ".qt", ".mpg", ".mp2", ".mpeg", ".mpe"]
+
+-- List of extensions for images. If a file has one of these extensions
+-- we use the image Info from the API to verify the file.
+imageExtensions = [".png", ".jpeg", ".jpg", ".gif", ".bmp"]
+
+-- Checks that a given file size is within the bounds specified by
+-- the (min, max) tuple.
+fileCheck :: (Integer, Integer) -> Word64 -> VerificationStatus
+fileCheck (minSize, maxSize) size =
+  if conv <= maxSize && conv >= minSize
+  then Good
+  else Bad
+  where conv = fromIntegral size :: Integer
