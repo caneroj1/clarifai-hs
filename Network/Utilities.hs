@@ -11,6 +11,7 @@ import qualified Data.Map.Lazy              as Map
 import           Data.Maybe
 import           Data.Scientific
 import qualified Data.Text                  as T
+import qualified Data.Vector                as V
 import           Data.Word
 import           Network.Wreq
 
@@ -33,7 +34,10 @@ processRequest response = do  r <- asJSON =<< response :: IO JSON
 apiErr :: Int -> Obj -> String
 apiErr code body
   | code == 401 = getString "status_msg" body
-  | code == 400 = getString "error"      body
+  | code == 400 = ret $ Map.lookup "status_msg" body
+  where ret val
+          | isNothing val = getString "status_msg" body
+          | otherwise = value2String $ fromJust val
 
 -- Gets a value that we know exists from a map
 definite :: String -> Obj -> Value
@@ -53,18 +57,34 @@ value2Int :: Value -> Integer
 value2Int (Number x) = coefficient x
 value2Int _ = 0
 
+-- Convert an Aeson value into a Double
+value2Double :: Value -> Double
+value2Double (Number x) = toRealFloat x :: Double
+value2Double _ = 0
+
 -- Convert an Aeson value into a hash map
 value2Map :: Value -> HObj
 value2Map (Object o) = o
 value2Map _ = Hash.empty
 
+-- Convert an Aeson value into a Vector
+value2Vector :: Value -> V.Vector Value
+value2Vector (Array a) = a
+value2Vector _ = V.empty
+
 -- Composes the definite and value2* functions into
 -- a single function that gets and converts from a map.
-getInt key      = value2Int . definite key
-getString key   = value2String . definite key
-getMap key      = value2Map . definite key
-getInt' key     = value2Int . definite' key
-getString' key  = value2String . definite' key
+-- Data.Map
+getInt      key = value2Int . definite key
+getString   key = value2String . definite key
+getMap      key = value2Map . definite key
+getVec      key = value2Vector . definite key
+
+-- Data.HashMap
+getInt'     key = value2Int . definite' key
+getString'  key = value2String . definite' key
+getMap'     key = value2Map . definite' key
+getVec'     key = value2Vector . definite' key
 
 -- custom postWith that overrides default checkStatus functionality.
 -- no longer returns an error on non-2** status codes.
@@ -84,9 +104,9 @@ imageExtensions = [".png", ".jpeg", ".jpg", ".gif", ".bmp"]
 
 -- Checks that a given file size is within the bounds specified by
 -- the (min, max) tuple.
-fileCheck :: (Integer, Integer) -> Word64 -> VerificationStatus
-fileCheck (minSize, maxSize) size =
-  if conv <= maxSize && conv >= minSize
+fileCheck :: Integer -> Word64 -> VerificationStatus
+fileCheck maxSize size =
+  if conv <= maxSize
   then Good
   else Bad
   where conv = fromIntegral size :: Integer

@@ -3,12 +3,13 @@
 module Network.Clarifai
   (
     Client(..),
-    -- TagSet,
+    TagSet(..),
     verifyImageBatchSize,
     verifyVideoBatchSize,
     verifyFiles,
     authorize,
-    info
+    info,
+    tag
   ) where
 
 import qualified Control.Exception          as E
@@ -22,6 +23,7 @@ import           Data.Either
 import           Data.List
 import qualified Data.Map.Lazy              as Map
 import qualified Data.Text                  as T
+import qualified Data.Vector                as V
 import           Network.HTTP
 import qualified Network.HTTP.Client        as Net
 import           Network.Utilities
@@ -69,13 +71,36 @@ toInfo origObj = Info mbs maxis minis maxib mvbs maxvs minvs mvb mvd
         mvb   = getInt' "max_video_bytes"      obj
         mvd   = getInt' "max_video_duration"   obj
 
+-- A TagSet represents a single result from the Tag endpoint.
+-- Each result has a unique docid, but they can also have local IDs
+-- if those are provided. They also have words and probabilities.
+type Tag = (String, Double)
+data TagSet = TagSet {
+  docID   :: Integer,
+  localID :: String,
+  tags    :: V.Vector Tag
+} deriving (Show)
+
+getTags :: HObj -> V.Vector Tag
+getTags o = V.zip classes probs
+  where classes = V.map value2String (getVec' "classes" o)
+        probs = V.map value2Double (getVec' "probs" o)
+
+objToTagSet :: HObj -> TagSet
+objToTagSet o = TagSet docID localID tags
+  where docID = getInt' "docid" o
+        localID = getString' "local_id" o
+        tags = getTags (getMap' "tag" $ getMap' "result" o)
+
 --------------------
 ---- API Routes ----
 --------------------
 -- For authentication
-tokenUrl = "https://api.clarifai.com/v1/token/"
+tokenUrl  = "https://api.clarifai.com/v1/token/"
 -- For API info
-infoUrl  = "https://api.clarifai.com/v1/info/"
+infoUrl   = "https://api.clarifai.com/v1/info/"
+-- Tag images/videos
+tagUrl    = "https://api.clarifai.com/v1/tag/"
 
 -- Authorize an application
 -- Sends a POST request to Clarifai's authentication endpoint.
@@ -111,6 +136,28 @@ info client = resp
                     else
                       return (Right (toInfo body))
 
+-- TODO: support localIDs
+-- TODO: use partFileSource?
+-- Utilizes the tag endpoint of the clarifai API to tag
+-- multiple files from the local file system.
+tag :: Client -> [FilePath] -> IO (Either Errors (V.Vector TagSet))
+tag (App _ _) _ = return (Left (0, "You have not authorized your app yet."))
+tag c fs = resp
+  where opts = authHeader c
+        toParts fp = partFile (T.pack $ takeBaseName fp) fp
+        files = map toParts fs
+        resp = do (status, body) <- processRequest $ postWith opts tagUrl files
+                  let extractedVec = vecOfObjects $ getVec "results" body
+                  let code = status ^. statusCode in
+                    if code /= 200 then
+                      return (Left (code, apiErr code body))
+                    else
+                      return (Right (V.map objToTagSet extractedVec))
+                    where
+
+vecOfObjects :: V.Vector Value -> V.Vector HObj
+vecOfObjects = V.map value2Map
+
 -- Given an API Info type and a list of FilePaths, we verify each of the files.
 -- If the file has an extension, we decide which Info attribute to use
 -- to verify the file. If it has no extension, we choose not to verify. This
@@ -120,13 +167,13 @@ verifyFiles :: Info -> [FilePath] -> IO [(FilePath, IO VerificationStatus)]
 verifyFiles info fs = do
   let zipped = zip fs (map getFileSize fs)
   return (map (verify info) zipped)
-  where verify (Info _ mxi mni _ _ mxv mnv _ _) (path, ioSize)
+  where verify (Info _ _ _ ib _ _ _ _ vb) (path, ioSize)
           | ext `elem` imageExtensions = (path, fmap imgC ioSize)
           | ext `elem` videoExtensions = (path, fmap vidC ioSize)
           | otherwise = (path, return Unknown)
           where ext = takeExtension path
-                vidC = fileCheck (mnv, mxv)
-                imgC = fileCheck (mni, mxi)
+                vidC = fileCheck vb
+                imgC = fileCheck ib
 
 -- Given an API Info type and a list of FilePaths, we verify
 -- the length of the list with what the Info type specifies is

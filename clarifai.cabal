@@ -71,7 +71,8 @@ library
                        scientific >= 0.3.3.8,
                        unordered-containers >= 0.2.5.1,
                        HTTP >= 4000.2.22,
-                       easy-file >= 0.2.1
+                       easy-file >= 0.2.1,
+                       vector >= 0.11.0.0
 
   -- Directories containing source files.
   -- hs-source-dirs:
