@@ -1,9 +1,25 @@
+{-|
+Module      : Network.Clarifai
+Description : API Client for the Clarifai API.
+Copyright   : (c) Joseph Canero, 2015
+License     : MIT
+Maintainer  : caneroj1@tcnj.edu
+Stability   : experimental
+Portability : portable
+
+Provides functionality for interacting with Clarifai's
+Image Tagging API. Users need a Clarifai account to use
+this, as the endpoints require an access token.
+-}
+
 {-# LANGUAGE OverloadedStrings #-}
 
 module Network.Clarifai
   (
     Client(..),
     TagSet(..),
+    Info(..),
+    Tag(..),
     verifyImageBatchSize,
     verifyVideoBatchSize,
     verifyFiles,
@@ -30,7 +46,7 @@ import           Network.Utilities
 import           Network.Wreq
 import           System.EasyFile
 
--- The Client data type has two constructors. The first should be used
+-- | The Client data type has two constructors. The first should be used
 -- when constructing a client with an access token. The second constructor
 -- should be used when passing in an application's client id and client secret.
 data Client = Client String | App String String deriving (Show)
@@ -42,7 +58,7 @@ authHeader (Client token) = defaults' & header "Authorization" .~ [packed]
         packed = BStrict.pack auth
 authHeader _ = defaults
 
--- The Info data type is used as a response from the
+-- | The Info data type is used as a response from the
 -- /info endpoint. This type contains information about the
 -- various usage limits for the API.
 data Info = Info {
@@ -71,10 +87,13 @@ toInfo origObj = Info mbs maxis minis maxib mvbs maxvs minvs mvb mvd
         mvb   = getInt' "max_video_bytes"      obj
         mvd   = getInt' "max_video_duration"   obj
 
--- A TagSet represents a single result from the Tag endpoint.
+-- | A Tag is a pair of String and Double and represents a word class
+-- from the Clarifai model and the associated probability.
+data Tag = Tag String Double deriving (Show)
+
+-- | A TagSet represents a single result from the Tag endpoint.
 -- Each result has a unique docid, but they can also have local IDs
 -- if those are provided. They also have words and probabilities.
-type Tag = (String, Double)
 data TagSet = TagSet {
   docID   :: Integer,
   localID :: String,
@@ -82,7 +101,7 @@ data TagSet = TagSet {
 } deriving (Show)
 
 getTags :: HObj -> V.Vector Tag
-getTags o = V.zip classes probs
+getTags o = V.map (uncurry Tag) (V.zip classes probs)
   where classes = V.map value2String (getVec' "classes" o)
         probs = V.map value2Double (getVec' "probs" o)
 
@@ -102,7 +121,7 @@ infoUrl   = "https://api.clarifai.com/v1/info/"
 -- Tag images/videos
 tagUrl    = "https://api.clarifai.com/v1/tag/"
 
--- Authorize an application
+-- | Authorize an application
 -- Sends a POST request to Clarifai's authentication endpoint.
 -- If we have a Client, we just return the client because I'm assuming
 -- the client was constructed with a valid access token. If we have an App,
@@ -122,7 +141,7 @@ authorize (App clientID clientSecret) = resp
                     else
                       return (Right (Client $ getString key body))
 
--- Gets the Clarifai API limits and information.
+-- | Gets the Clarifai API limits and information.
 -- Sends a get request to the /info endpoint and encapsulates
 -- the results into an Info type.
 info :: Client -> IO (Either Errors Info)
@@ -138,7 +157,7 @@ info client = resp
 
 -- TODO: support localIDs
 -- TODO: use partFileSource?
--- Utilizes the tag endpoint of the clarifai API to tag
+-- | Utilizes the tag endpoint of the clarifai API to tag
 -- multiple files from the local file system.
 tag :: Client -> [FilePath] -> IO (Either Errors (V.Vector TagSet))
 tag (App _ _) _ = return (Left (0, "You have not authorized your app yet."))
@@ -158,7 +177,7 @@ tag c fs = resp
 vecOfObjects :: V.Vector Value -> V.Vector HObj
 vecOfObjects = V.map value2Map
 
--- Given an API Info type and a list of FilePaths, we verify each of the files.
+-- | Given an API Info type and a list of FilePaths, we verify each of the files.
 -- If the file has an extension, we decide which Info attribute to use
 -- to verify the file. If it has no extension, we choose not to verify. This
 -- function maps each FilePath to a tuple of (FilePath, VerificationStatus),
@@ -175,7 +194,7 @@ verifyFiles info fs = do
                 vidC = fileCheck vb
                 imgC = fileCheck ib
 
--- Given an API Info type and a list of FilePaths, we verify
+-- | Given an API Info type and a list of FilePaths, we verify
 -- the length of the list with what the Info type specifies is
 -- acceptable batch size for images. This function assumes that
 -- the FilePaths all point to images.
@@ -183,7 +202,7 @@ verifyImageBatchSize :: Info -> [FilePath] -> Bool
 verifyImageBatchSize (Info size _ _ _ _ _ _ _ _) xs = size >= conv
   where conv = fromIntegral (length xs) :: Integer
 
--- Given an API Info type and a list of FilePaths, we verify
+-- | Given an API Info type and a list of FilePaths, we verify
 -- the length of the list with what the Info type specifies is
 -- acceptable batch size for videos. This function assumes that
 -- the FilePaths all point to videos.
