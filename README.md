@@ -1,2 +1,98 @@
 # clarifai-hs
-Haskell API Client for Clarifai.
+Haskell API Client for <a href="http://www.clarifai.com">Clarifai</a>.
+
+Clarifai provides image/video recognition services, and this library provides
+a web client to their API.
+
+All endpoints other than the <em>feedback</em> endpoint are implemented. This includes
+  - /info
+  - /token
+  - /tag
+
+## Installation
+
+<pre>cabal install clarifai</pre>
+
+## Example Usage
+
+### Authorization
+First create an ```App``` and then call the ```authorize``` function to authenticate your application. You must provide your client id and client secret.
+```haskell
+
+import Network.Clarifai
+import Data.Either
+
+clientID = "id"
+clientSecret = "secret"
+
+main = do
+  let myApp = App clientID clientSecret
+  resp <- authorize myApp
+
+```
+Then you can check the response for errors, or use the access token it provides back in the form of a ```Client```.
+
+### Getting API Info
+```haskell
+-- Omitted previous code
+main = do
+  -- Be sure to check for errors
+  let client = head $ rights [resp]
+  infoResponse <- info client
+```
+
+If there are no errors, you will get back an ```Info``` containing various information about the statistics and limits of the Clarifai API, like maximum video size, maximum image size, etc. You can use this verify any files you may want to tag, before you send a tagging request.
+
+### Verification
+When going to verify batch sizes, it is important not to mix and match between videos and images. The batch sizes for images and videos are different, so you cannot verify the sizes of the batches together even though you can send them in the same request. I don't do any differentiating between what kind of file the ```FilePath``` points to.
+
+If you are calling the ```verifyFiles``` function, however, you can have a list of both videos AND images, as long as the extensions of each ```FilePath``` indicate the type of the file.
+```haskell
+-- Omitted previous code
+main = do
+  -- Be sure to check for errors
+  let apiInfo = head $ rights [infoResponse]
+  let filePaths = [filePath1, filePath2, filePath3]
+
+  -- Verify the image batch size
+  -- The return value is a Bool indicating whether your list is of appropriate size for the API.
+  verifyImageBatchSize apiInfo filePaths
+
+  -- Verify the sizes of the files in the list. As long as each FilePath indicates whether the file is a video or an image,
+  -- the size of the file will be checked to make sure it is within the appropriate bounds according to the API Info.
+  verifyFiles infoData fileNames
+```
+
+### Tagging
+We can send a tag request with our list of ```FilePath```s. I've omitted any steps where we may have filtered out which files
+```verifyFiles``` marked as inappropriate for the request.
+```haskell
+-- Omitted previous code
+tagResponse <- tag client fileNames
+```
+
+## Contributing
+I'll gladly take contributions/improvements/pull requests.
+
+## License
+The MIT License (MIT)
+
+Copyright (c) 2015 Joe Canero
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

@@ -16,6 +16,7 @@ this, as the endpoints require an access token.
 
 module Network.Clarifai
   (
+    VerificationStatus(..),
     Client(..),
     TagSet(..),
     Info(..),
