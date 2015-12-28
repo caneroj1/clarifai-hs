@@ -112,8 +112,8 @@ authorize :: Client -> IO (Either Errors Client)
 authorize (Client token) = return (Right (Client token))
 authorize (App clientID clientSecret) = resp
   where params = ["client_id" := clientID,
-                      "client_secret" := clientSecret,
-                      "grant_type" := BS.pack "client_credentials"]
+                  "client_secret" := clientSecret,
+                  "grant_type" := BS.pack "client_credentials"]
         key = "access_token"
         resp = do (status, body) <- processRequest $ postWith' tokenUrl params
                   let code = status ^. statusCode in
@@ -144,7 +144,7 @@ tag :: Client -> [FilePath] -> IO (Either Errors (V.Vector TagSet))
 tag (App _ _) _ = return (Left (0, "You have not authorized your app yet."))
 tag c fs = resp
   where opts = authHeader c
-        toParts fp = partFile (T.pack $ takeBaseName fp) fp
+        toParts = partFile "encoded_data"
         files = map toParts fs
         resp = do (status, body) <- processRequest $ postWith opts tagUrl files
                   let extractedVec = vecOfObjects $ getVec "results" body
