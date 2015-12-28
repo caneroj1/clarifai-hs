@@ -42,11 +42,14 @@ build-type:          Simple
 
 -- Extra files to be distributed with the package, such as examples or a
 -- README.
--- extra-source-files:
+extra-source-files: README.md
 
 -- Constraint on the version of Cabal needed to build this package.
 cabal-version:       >=1.10
 
+source-repository head
+  type:     git
+  location: https://github.com/caneroj1/clarifai-hs
 
 library
   -- Modules exported by the library.
@@ -57,7 +60,7 @@ library
 
   -- LANGUAGE extensions used by modules in this package.
   other-extensions:    OverloadedStrings
-
+--  README
   -- Other library packages from which modules are imported.
   build-depends:       base >=4.8 && <4.9,
                        wreq >= 0.4.1.0,
