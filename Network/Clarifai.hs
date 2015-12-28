@@ -8,8 +8,9 @@ Stability   : experimental
 Portability : portable
 
 Provides functionality for interacting with Clarifai's
-Image Tagging API. Users need a Clarifai account to use
-this, as the endpoints require an access token.
+Image Tagging API. Allows users to submit images/videos to be recognized and
+tagged by Clarifai. Users will need a Clarifai account to make full use of this
+client.
 -}
 
 {-# LANGUAGE OverloadedStrings #-}
@@ -50,6 +51,7 @@ import           System.EasyFile
 -- | The Client data type has two constructors. The first should be used
 -- when constructing a client with an access token. The second constructor
 -- should be used when passing in an application's client id and client secret.
+-- The flow usually proceeds by creating an App and then authorizing it.
 data Client = Client String | App String String deriving (Show)
 
 -- Turn our authorized Client into an Authorization header
@@ -59,7 +61,7 @@ authHeader (Client token) = defaults' & header "Authorization" .~ [packed]
         packed = BStrict.pack auth
 authHeader _ = defaults
 
--- | The Info data type is used as a response from the
+-- | The Info data type is used to encapsulate a response from the
 -- /info endpoint. This type contains information about the
 -- various usage limits for the API.
 data Info = Info {
@@ -93,8 +95,9 @@ toInfo origObj = Info mbs maxis minis maxib mvbs maxvs minvs mvb mvd
 data Tag = Tag String Double deriving (Show)
 
 -- | A TagSet represents a single result from the Tag endpoint.
--- Each result has a unique docid, but they can also have local IDs
--- if those are provided. They also have words and probabilities.
+-- A TagSet is identified uniquely by its docID, and uniquely within a request
+-- by its localID. The most important feature of the TagSet is the vector of
+-- Tags.
 data TagSet = TagSet {
   docID   :: Integer,
   localID :: String,
