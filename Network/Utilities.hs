@@ -21,8 +21,8 @@ type HObj = Hash.HashMap T.Text Value
 type JSON = Response Obj
 type Errors = (Int, String)
 
--- Enum type for verifying FilePaths before sending to the API.
-data VerificationStatus = Good | Bad | Unknown
+-- | Enum type for verifying FilePaths before sending to the API.
+data VerificationStatus = Good | Bad | Unknown deriving (Show)
 
 -- Process the results of a request into JSON
 -- Returns an IO Tuple of the status and response body.
