@@ -72,6 +72,9 @@ value2Vector :: Value -> V.Vector Value
 value2Vector (Array a) = a
 value2Vector _ = V.empty
 
+vecOfObjects :: V.Vector Value -> V.Vector HObj
+vecOfObjects = V.map value2Map
+
 -- Composes the definite and value2* functions into
 -- a single function that gets and converts from a map.
 -- Data.Map

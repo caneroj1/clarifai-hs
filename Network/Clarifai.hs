@@ -178,22 +178,21 @@ tag c fs = resp
                       return (Right (V.map objToTagSet extractedVec))
                     where
 
-vecOfObjects :: V.Vector Value -> V.Vector HObj
-vecOfObjects = V.map value2Map
-
--- | Given an API Info type and a list of FilePaths, we verify each of the files.
+-- | Given an API Info type and a list of FilePaths, we verify each file.
 -- If the file has an extension, we decide which Info attribute to use
 -- to verify the file. If it has no extension, we choose not to verify. This
--- function maps each FilePath to a tuple of (FilePath, VerificationStatus),
--- where VerificationStatus = Good | Bad | Unknown
-verifyFiles :: Info -> [FilePath] -> IO [(FilePath, IO VerificationStatus)]
+-- function maps each FilePath to a tuple of IO (FilePath, VerificationStatus),
+-- where VerificationStatus = Good | Bad | Unknown.
+verifyFiles :: Info -> [FilePath] -> IO [IO (FilePath, VerificationStatus)]
 verifyFiles info fs = do
-  let zipped = zip fs (map getFileSize fs)
-  return (map (verify info) zipped)
-  where verify (Info _ _ _ ib _ _ _ _ vb) (path, ioSize)
-          | ext `elem` imageExtensions = (path, fmap imgC ioSize)
-          | ext `elem` videoExtensions = (path, fmap vidC ioSize)
-          | otherwise = (path, return Unknown)
+  let zipped = zipWith (\path size -> do
+                          fsize <- size
+                          return (path, fsize)) fs (map getFileSize fs)
+  return (map (fmap (verify info)) zipped)
+  where verify (Info _ _ _ ib _ _ _ _ vb) (path, size)
+          | ext `elem` imageExtensions = (path, imgC size)
+          | ext `elem` videoExtensions = (path, vidC size)
+          | otherwise = (path, Unknown)
           where ext = takeExtension path
                 vidC = fileCheck vb
                 imgC = fileCheck ib
