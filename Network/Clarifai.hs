@@ -11,9 +11,27 @@ Provides functionality for interacting with Clarifai's
 Image Tagging API. Allows users to submit images/videos to be recognized and
 tagged by Clarifai. Users will need a Clarifai account to make full use of this
 client.
+
+Example usage:
+
+import System.Environment
+import qualified Data.Vector as V
+import Network.Clarifai
+
+main :: IO ()
+main = do
+  identity <- getEnv "CLARIFAI_ID"
+  secret   <- getEnv "CLARIFAI_SECRET"
+  files <- getArgs
+  tags <- runClarifaiT (App identity secret) $
+            V.zip (V.fromList files) <$> tagM files
+  print tags
+
+
 -}
 
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings          #-}
 
 module Network.Clarifai
   (
@@ -22,16 +40,27 @@ module Network.Clarifai
     TagSet(..),
     Info(..),
     Tag(..),
+    Errors,
+
     verifyImageBatchSize,
     verifyVideoBatchSize,
     verifyFiles,
     authorize,
     info,
-    tag
+    tag,
+
+    tagM,
+    infoM,
+    runClarifaiT
   ) where
 
 import qualified Control.Exception          as E
 import           Control.Lens
+import           Control.Monad              (liftM, void)
+import           Control.Monad.IO.Class     (MonadIO, liftIO)
+import           Control.Monad.Trans.Class  (lift)
+import           Control.Monad.Trans.Either (EitherT (..), left, runEitherT)
+import           Control.Monad.Trans.Reader (ReaderT, ask, runReaderT)
 import           Data.Aeson
 import           Data.Aeson.Lens
 import qualified Data.ByteString            as BL
@@ -41,12 +70,36 @@ import           Data.Either
 import           Data.List
 import qualified Data.Map.Lazy              as Map
 import qualified Data.Text                  as T
+import           Data.Vector                (Vector)
 import qualified Data.Vector                as V
 import           Network.HTTP
 import qualified Network.HTTP.Client        as Net
 import           Network.Utilities
 import           Network.Wreq
 import           System.EasyFile
+
+
+
+-- | monadic layer
+newtype ClarifaiT m a = ClarifaiT {
+  unCreateClient :: ReaderT Client (EitherT Errors m) a
+  } deriving (Functor, Applicative, Monad, MonadIO)
+
+runClarifaiT :: MonadIO m => Client -> ClarifaiT m a -> m (Either Errors a)
+runClarifaiT client f =
+  liftIO (authorize client) >>=
+    either (return.Left)
+           (runEitherT . runReaderT (unCreateClient f))
+
+wrap :: MonadIO m => (Client-> IO (Either Errors a0)) -> ClarifaiT m a0
+wrap f = ClarifaiT $ either (lift.left) return =<< liftIO . f =<< ask
+
+infoM :: MonadIO m => ClarifaiT m Info
+infoM = wrap info
+
+tagM :: MonadIO m => [FilePath] -> ClarifaiT m (Vector TagSet)
+tagM fn = wrap (`tag` fn)
+
 
 -- | The Client data type has two constructors. The first should be used
 -- when constructing a client with an access token. The second constructor
@@ -133,31 +186,28 @@ tagUrl    = "https://api.clarifai.com/v1/tag/"
 -- access token.
 authorize :: Client -> IO (Either Errors Client)
 authorize (Client token) = return (Right (Client token))
-authorize (App clientID clientSecret) = resp
+authorize (App clientID clientSecret) =
+  handleReq (Client . getString key) =<< processRequest (postWith' tokenUrl params)
   where params = ["client_id" := clientID,
                   "client_secret" := clientSecret,
                   "grant_type" := BS.pack "client_credentials"]
         key = "access_token"
-        resp = do (status, body) <- processRequest $ postWith' tokenUrl params
-                  let code = status ^. statusCode in
-                    if code /= 200 then
-                      return (Left (code, apiErr code body))
-                    else
-                      return (Right (Client $ getString key body))
+
 
 -- | Gets the Clarifai API limits and information.
 -- Sends a get request to the /info endpoint and encapsulates
 -- the results into an Info type.
 info :: Client -> IO (Either Errors Info)
 info (App _ _) = return (Left (0, "You have not authorized your app yet."))
-info client = resp
-  where opts = authHeader client
-        resp = do (status, body) <- processRequest $ getWith opts infoUrl
-                  let code = status ^. statusCode in
-                    if code /= 200 then
-                      return (Left (code, apiErr code body))
-                    else
-                      return (Right (toInfo body))
+info client =
+  handleReq toInfo =<< processRequest (getWith (authHeader client) infoUrl)
+
+handleReq handler (status,body) =
+  let code = status ^. statusCode in
+  return $ if code /= 200 then
+             Left (code, apiErr code body)
+           else
+             Right (handler body)
 
 -- TODO: support localIDs
 -- TODO: use partFileSource?
@@ -165,18 +215,12 @@ info client = resp
 -- multiple files from the local file system.
 tag :: Client -> [FilePath] -> IO (Either Errors (V.Vector TagSet))
 tag (App _ _) _ = return (Left (0, "You have not authorized your app yet."))
-tag c fs = resp
+tag c fs = handleReq handler =<< processRequest (postWith opts tagUrl files)
   where opts = authHeader c
         toParts = partFile "encoded_data"
         files = map toParts fs
-        resp = do (status, body) <- processRequest $ postWith opts tagUrl files
-                  let extractedVec = vecOfObjects $ getVec "results" body
-                  let code = status ^. statusCode in
-                    if code /= 200 then
-                      return (Left (code, apiErr code body))
-                    else
-                      return (Right (V.map objToTagSet extractedVec))
-                    where
+        handler body = let extractedVec = vecOfObjects $ getVec "results" body
+                       in V.map objToTagSet extractedVec
 
 -- | Given an API Info type and a list of FilePaths, we verify each file.
 -- If the file has an extension, we decide which Info attribute to use
@@ -189,26 +233,24 @@ verifyFiles info fs = do
                           fsize <- size
                           return (path, fsize)) fs (map getFileSize fs)
   return (map (fmap (verify info)) zipped)
-  where verify (Info _ _ _ ib _ _ _ _ vb) (path, size)
+  where verify info (path, size)
           | ext `elem` imageExtensions = (path, imgC size)
           | ext `elem` videoExtensions = (path, vidC size)
           | otherwise = (path, Unknown)
           where ext = takeExtension path
-                vidC = fileCheck vb
-                imgC = fileCheck ib
+                vidC = fileCheck $ maxVideoBytes info
+                imgC = fileCheck $ maxImageBytes info
 
 -- | Given an API Info type and a list of FilePaths, we verify
 -- the length of the list with what the Info type specifies is
 -- acceptable batch size for images. This function assumes that
 -- the FilePaths all point to images.
 verifyImageBatchSize :: Info -> [FilePath] -> Bool
-verifyImageBatchSize (Info size _ _ _ _ _ _ _ _) xs = size >= conv
-  where conv = fromIntegral (length xs) :: Integer
+verifyImageBatchSize info xs = maxBatchSize info >= fromIntegral (length xs)
 
 -- | Given an API Info type and a list of FilePaths, we verify
 -- the length of the list with what the Info type specifies is
 -- acceptable batch size for videos. This function assumes that
 -- the FilePaths all point to videos.
 verifyVideoBatchSize :: Info -> [FilePath] -> Bool
-verifyVideoBatchSize (Info _ _ _ _ size _ _ _ _) xs = size >= conv
-  where conv = fromIntegral (length xs) :: Integer
+verifyVideoBatchSize info xs = maxVideoSize info >= fromIntegral (length xs)
