@@ -1,6 +1,8 @@
 # clarifai-hs
 Haskell API Client for <a href="http://www.clarifai.com">Clarifai</a>.
 
+Documentation hosted on <a href="https://hackage.haskell.org/package/clarifai">Hackage</a>.
+
 Clarifai provides image/video recognition services, and this library provides
 a web client to their API.
 
