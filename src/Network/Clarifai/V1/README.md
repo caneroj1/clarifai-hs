@@ -1,6 +1,5 @@
 # clarifai-hs
 Haskell API Client for <a href="http://www.clarifai.com">Clarifai</a>.
-This is the readme for the V2 API client. Click [here](https://github.com/caneroj1/clarifai-hs/tree/master/src/Network/Clarifai/V1/README.md) for the V1 API readme.
 
 Documentation hosted on <a href="https://hackage.haskell.org/package/clarifai">Hackage</a>.
 
@@ -15,6 +14,7 @@ All endpoints other than the <em>feedback</em> endpoint are implemented. This in
 ## Installation
 
 <pre>cabal install clarifai</pre>
+<pre>stack install clarifai</pre>
 
 ## Example Usage
 
@@ -22,7 +22,7 @@ All endpoints other than the <em>feedback</em> endpoint are implemented. This in
 First create an ```App``` and then call the ```authorize``` function to authenticate your application. You must provide your client id and client secret.
 ```haskell
 
-import Network.Clarifai
+import Network.Clarifai.V1
 import Data.Either
 
 clientID = "id"
@@ -80,7 +80,7 @@ I'll gladly take contributions/improvements/pull requests.
 ## License
 The MIT License (MIT)
 
-Copyright (c) 2015 Joe Canero
+Copyright (c) 2017 Joe Canero
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
