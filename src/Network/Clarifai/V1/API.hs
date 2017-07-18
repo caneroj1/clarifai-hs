@@ -1,6 +1,6 @@
 {-|
 
-Module      : Network.Clarifai
+Module      : Network.Clarifai.V1.API
 Description : API Client for the Clarifai API.
 Copyright   : (c) Joseph Canero, 2017
 License     : MIT
@@ -33,7 +33,7 @@ main = do
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
 
-module Network.Clarifai
+module Network.Clarifai.V1.API
   (
     VerificationStatus(..),
     Client(..),
@@ -54,31 +54,29 @@ module Network.Clarifai
     runClarifaiT
   ) where
 
-import qualified Control.Exception          as E
+import qualified Control.Exception             as E
 import           Control.Lens
-import           Control.Monad              (liftM, void)
-import           Control.Monad.IO.Class     (MonadIO, liftIO)
-import           Control.Monad.Trans.Class  (lift)
-import           Control.Monad.Trans.Either (EitherT (..), left, runEitherT)
-import           Control.Monad.Trans.Reader (ReaderT, ask, runReaderT)
+import           Control.Monad                 (liftM, void)
+import           Control.Monad.IO.Class        (MonadIO, liftIO)
+import           Control.Monad.Trans.Class     (lift)
+import           Control.Monad.Trans.Either    (EitherT (..), left, runEitherT)
+import           Control.Monad.Trans.Reader    (ReaderT, ask, runReaderT)
 import           Data.Aeson
 import           Data.Aeson.Lens
-import qualified Data.ByteString            as BL
-import qualified Data.ByteString.Char8      as BStrict
-import qualified Data.ByteString.Lazy.Char8 as BS
+import qualified Data.ByteString               as BL
+import qualified Data.ByteString.Char8         as BStrict
+import qualified Data.ByteString.Lazy.Char8    as BS
 import           Data.Either
 import           Data.List
-import qualified Data.Map.Lazy              as Map
-import qualified Data.Text                  as T
-import           Data.Vector                (Vector)
-import qualified Data.Vector                as V
+import qualified Data.Map.Lazy                 as Map
+import qualified Data.Text                     as T
+import           Data.Vector                   (Vector)
+import qualified Data.Vector                   as V
+import           Network.Clarifai.V1.Utilities
 import           Network.HTTP
-import qualified Network.HTTP.Client        as Net
-import           Network.Utilities
+import qualified Network.HTTP.Client           as Net
 import           Network.Wreq
 import           System.EasyFile
-
-
 
 -- | monadic layer
 newtype ClarifaiT m a = ClarifaiT {
@@ -99,7 +97,6 @@ infoM = wrap info
 
 tagM :: MonadIO m => [FilePath] -> ClarifaiT m (Vector TagSet)
 tagM fn = wrap (`tag` fn)
-
 
 -- | The Client data type has two constructors. The first should be used
 -- when constructing a client with an access token. The second constructor

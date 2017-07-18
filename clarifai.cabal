@@ -19,8 +19,9 @@ source-repository head
   location: https://github.com/caneroj1/clarifai-hs
 
 library
-  exposed-modules:     Network.Clarifai
-  other-modules:       Network.Utilities
+  exposed-modules:     Network.Clarifai.V1
+  other-modules:       Network.Clarifai.V1.API
+                     , Network.Clarifai.V1.Utilities
   build-depends:       base >= 4.6 && < 5,
                        wreq >= 0.4.1.0,
                        lens >= 4.13,

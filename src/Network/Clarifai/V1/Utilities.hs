@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Network.Utilities where
+module Network.Clarifai.V1.Utilities where
 
 import           Control.Lens
 import           Data.Aeson
