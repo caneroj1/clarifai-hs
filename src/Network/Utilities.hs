@@ -50,27 +50,27 @@ definite' k m = fromJust $ Hash.lookup (T.pack k) m
 -- Convert an Aeson value into a String
 value2String :: Value -> String
 value2String (String xs) = T.unpack xs
-value2String _ = ""
+value2String _           = ""
 
 -- Convert an Aeson value into an Integer
 value2Int :: Value -> Integer
 value2Int (Number x) = coefficient x
-value2Int _ = 0
+value2Int _          = 0
 
 -- Convert an Aeson value into a Double
 value2Double :: Value -> Double
 value2Double (Number x) = toRealFloat x :: Double
-value2Double _ = 0
+value2Double _          = 0
 
 -- Convert an Aeson value into a hash map
 value2Map :: Value -> HObj
 value2Map (Object o) = o
-value2Map _ = Hash.empty
+value2Map _          = Hash.empty
 
 -- Convert an Aeson value into a Vector
 value2Vector :: Value -> V.Vector Value
 value2Vector (Array a) = a
-value2Vector _ = V.empty
+value2Vector _         = V.empty
 
 vecOfObjects :: V.Vector Value -> V.Vector HObj
 vecOfObjects = V.map value2Map
@@ -94,7 +94,7 @@ getVec'     key = value2Vector . definite' key
 postWith' :: (String -> [FormParam] -> IO (Response BS.ByteString) )
 postWith' = postWith defaults'
 
-defaults' = set checkStatus (Just $ \_ _ _ -> Nothing) defaults
+defaults' = set checkResponse Nothing defaults
 
 -- List of extensions for videos. If a file has one of these extensions
 -- we use the video Info from the API to verify the file.
