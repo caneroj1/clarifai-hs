@@ -1,6 +1,6 @@
 # clarifai-hs
 Haskell API Client for <a href="http://www.clarifai.com">Clarifai</a>.
-This is the readme for the V2 API client. Click [here](https://github.com/caneroj1/clarifai-hs/tree/master/src/Network/Clarifai/V1/README.md) for the V1 API readme.
+This is the readme for the V2 API client. Click [here](https://github.com/caneroj1/clarifai-hs/tree/v2-refactor/src/Network/Clarifai/V1/README.md) for the V1 API readme.
 
 Documentation hosted on <a href="https://hackage.haskell.org/package/clarifai">Hackage</a>.
 
