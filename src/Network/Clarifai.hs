@@ -1,9 +1,10 @@
 {-|
+
 Module      : Network.Clarifai
 Description : API Client for the Clarifai API.
-Copyright   : (c) Joseph Canero, 2015
+Copyright   : (c) Joseph Canero, 2017
 License     : MIT
-Maintainer  : caneroj1@tcnj.edu
+Maintainer  : jmc41493@gmail.com
 Stability   : experimental
 Portability : portable
 
@@ -26,7 +27,6 @@ main = do
   tags <- runClarifaiT (App identity secret) $
             V.zip (V.fromList files) <$> tagM files
   print tags
-
 
 -}
 
