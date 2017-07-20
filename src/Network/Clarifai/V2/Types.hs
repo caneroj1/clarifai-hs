@@ -14,22 +14,26 @@ module Network.Clarifai.V2.Types
   -- * API Inputs
 , Predictions(..)
 , Image(..)
+, Identifier(..)
   -- * API Requests
 , predict
 ) where
 
-import           Control.Lens               hiding ((.=))
+import           Control.Lens                               hiding ((.=))
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Reader
 import           Data.Aeson
-import qualified Data.ByteString            as BS
-import qualified Data.ByteString.Lazy       as BL
+import qualified Data.ByteString                            as BS
+import qualified Data.ByteString.Lazy                       as BL
 import           Data.Char
 import           Data.Monoid
-import qualified Data.Text                  as T (unpack)
+import qualified Data.Text                                  as T (unpack)
 import           Data.Text.Conversions
 import           GHC.Generics
+import           Network.Clarifai.V2.Internal.JsonUtilities
 import           Network.Wreq
+
+import           Debug.Trace
 
 -- | newtype wrapper around Clarifai API keys.
 newtype APIKey = APIKey {
@@ -63,23 +67,26 @@ type Clarifai a = ClarifaiT IO a
 --   send a = ClarifaiT $ ask >>= \k -> liftIO $ sendClarifaiPOST k (toUrl a) (toJSON a)
 --                            >>= eitherDecode'
 
+-- | Newtype wrapper around strings that can be used as identifiers for
+-- objects uploaded to Clarifai's API.
+newtype Identifier = Id String
+
 -- | The 'Image' type represents an image that will be presented to Clarifai
 -- in order to receive predictions from a model.
-data Image = Url String -- ^ Url of an image that will be passed as input
-           | Image (Base64 BS.ByteString) -- ^ A Base64-encoded version of an image
-
-encodeImage :: (ToText a) => a -> Value
-encodeImage v = object [
-    "data" .= object [
-      "image" .= object [
-        "url" .= toText v
-      ]
-    ]
-  ]
+data Image = -- ^ Url of an image that will be passed as input
+             Url String
+             -- ^ A Base64-encoded version of an image
+           | Image (Base64 BS.ByteString)
+             -- ^ Url of an image that will be passed as input, along with an identifier
+           | UrlId String Identifier
+             -- ^ A Base64-encoded version of an image, along with an identifier
+           | ImageId (Base64 BS.ByteString) Identifier
 
 instance ToJSON Image where
-  toJSON (Url s)   = encodeImage s
-  toJSON (Image b) = encodeImage b
+  toJSON (Url s)            = encodeImage "url" s Nothing
+  toJSON (Image b)          = encodeImage "base64" b Nothing
+  toJSON (UrlId s (Id i))   = encodeImage "url" s (Just i)
+  toJSON (ImageId b (Id i)) = encodeImage "base64" b (Just i)
 
 -- | 'Predictions' represents input values to be passed to Clarifai's predict API.
 -- It holds onto numerous images that will be used to get predictions. Clarifai supports
@@ -100,5 +107,5 @@ sendClarifaiPOST apiKey = postWith apiKeyOptions
 -- | Using 'Predictions' as input, send a request to the Clarifai API to get predictions for
 -- a set of pictures.
 predict :: (MonadIO m) => Predictions -> ClarifaiT m (Response BL.ByteString)
-predict p = ClarifaiT $ ask >>= \k -> liftIO $ sendClarifaiPOST k predictUrl (toJSON p)
+predict p = ClarifaiT $ ask >>= \k -> liftIO $ sendClarifaiPOST k predictUrl (trace (show $ encode p) (toJSON p))
   where predictUrl = "https://api.clarifai.com/v2/models/aaa03c23b3724a16a56b629203edc62c/outputs"

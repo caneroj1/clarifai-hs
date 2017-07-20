@@ -12,5 +12,5 @@ predictions :: Predictions
 predictions = Predictions [
     Url "https://www.omnihotels.com/-/media/images/hotels/homrst/restaurants/homrst-omni-homestead-resort-jeffersons-restaurant-2.jpg"
   , Url "https://media-cdn.tripadvisor.com/media/photo-o/0a/56/44/5a/restaurant.jpg"
-  , Url "https://media.timeout.com/images/102600575/image.jpg"
+  , UrlId "https://media.timeout.com/images/102600575/image.jpg" (Id "MyIdentifier")
   ]
