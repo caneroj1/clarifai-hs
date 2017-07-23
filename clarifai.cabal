@@ -21,12 +21,14 @@ source-repository head
 library
   exposed-modules:     Network.Clarifai.V1
                      , Network.Clarifai.V2
+                     , Network.Clarifai.V2.Types.Inputs
   other-modules:       Network.Clarifai.V1.API
                      , Network.Clarifai.V1.Utilities
                      , Network.Clarifai.V2.API
                      , Network.Clarifai.V2.Internal.JsonUtilities
                      , Network.Clarifai.V2.Models
                      , Network.Clarifai.V2.Types
+                     , Network.Clarifai.V2.Types.Inputs
                      , Network.Clarifai.V2.Utilities
   build-depends:       base >= 4.6 && < 5,
                        wreq >= 0.4.1.0,
@@ -45,7 +47,8 @@ library
                        easy-file >= 0.2.1,
                        vector >= 0.11.0.0,
                        text-conversions,
-                       text
+                       text,
+                       data-default-class
   hs-source-dirs: src
   default-language:    Haskell2010
 

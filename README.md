@@ -4,19 +4,29 @@ This is the readme for the V2 API client. Click [here](https://github.com/canero
 
 Documentation hosted on <a href="https://hackage.haskell.org/package/clarifai">Hackage</a>.
 
-Clarifai provides image/video recognition services, and this library provides
-a web client to their API.
+Clarifai provides image/video recognition services, and this library provides a web client to their API.
 
-All endpoints other than the <em>feedback</em> endpoint are implemented. This includes
-  - /info
-  - /token
-  - /tag
+## Usage
 
-## Installation
+## Creating Inputs
 
-<pre>cabal install clarifai</pre>
+Inputs to the Clarifai API can be constructed as follows:
 
-## Example Usage
+```haskell
+
+i :: Input
+i = input (Url "img.png") & crop ?~ Crop 0.2 0.4 0.6 0.8
+                          & allowDuplicate .~ True
+                          & metadata .~ [("MyMeta", String "data")]
+
+```
+
+An `Input` data type is just a collection of relevant data about an image. The above example does the following:
+
+* Creates an input from a url to an image
+* Species crop settings for the image
+* Tells Clarifai to allow multiple inputs with the same url
+* Creates a metadata object with custom fields.
 
 ### Authorization
 First create an ```App``` and then call the ```authorize``` function to authenticate your application. You must provide your client id and client secret.
