@@ -1,7 +1,6 @@
 module Network.Clarifai.V2.Models where
 
--- | Data type for the various models available
--- through Clarifai.
+-- | Data type for the various models available through Clarifai.
 data Model = -- ^ Recognize clothing, accessories, and other fashion-related items
              Apparel
              -- ^ Identify celebrities that closely resemble detected faces
@@ -30,8 +29,9 @@ data Model = -- ^ Recognize clothing, accessories, and other fashion-related ite
            | Wedding
            deriving (Show, Eq)
 
+-- | Typeclass used for creating your own models.
 class IsModel a where
-  modelId :: a -> String
+  modelId :: a -> String -- ^ modelId should accept the type of the model and return the identifier of that model.
 
 instance IsModel Model where
   modelId Apparel          = "e0be3b9d6a454f0493ac3a30784001ff"

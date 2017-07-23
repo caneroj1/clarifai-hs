@@ -21,12 +21,13 @@ source-repository head
 library
   exposed-modules:     Network.Clarifai.V1
                      , Network.Clarifai.V2
+                     , Network.Clarifai.V2.Types.Base
                      , Network.Clarifai.V2.Types.Inputs
+                     , Network.Clarifai.V2.Models
   other-modules:       Network.Clarifai.V1.API
                      , Network.Clarifai.V1.Utilities
                      , Network.Clarifai.V2.API
                      , Network.Clarifai.V2.Internal.JsonUtilities
-                     , Network.Clarifai.V2.Models
                      , Network.Clarifai.V2.Types
                      , Network.Clarifai.V2.Utilities
   build-depends:       base >= 4.6 && < 5,
