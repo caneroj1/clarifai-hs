@@ -12,6 +12,13 @@ module Network.Clarifai.V2.Types.Inputs
 , Concept(..)
 , Image(..)
 , Input(..)
+  -- ** Input Lenses
+, crop
+, metadata
+, inputId
+, concepts
+, allowDuplicate
+, image
   -- * Constructing Inputs
 , input
 ) where
@@ -77,7 +84,7 @@ instance ToJSON Input where
         where imgData = [("allow_duplicate_url", Bool $ _allowDuplicate i)] ++
                         imgFields (_image i)                                ++
                         maybe [] cropFields (_crop i)
-      buildConcepts = ("concepts", object . concatMap conceptFields $ _concepts i)
+      buildConcepts = ("concepts", Array . V.fromList . map (object . conceptFields) $ _concepts i)
       buildMetadata
         | null $ _metadata i = []
         | otherwise          = [("metadata", object $ _metadata i)]

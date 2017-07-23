@@ -28,7 +28,6 @@ library
                      , Network.Clarifai.V2.Internal.JsonUtilities
                      , Network.Clarifai.V2.Models
                      , Network.Clarifai.V2.Types
-                     , Network.Clarifai.V2.Types.Inputs
                      , Network.Clarifai.V2.Utilities
   build-depends:       base >= 4.6 && < 5,
                        wreq >= 0.4.1.0,
@@ -50,6 +49,22 @@ library
                        text,
                        data-default-class
   hs-source-dirs: src
+  default-language:    Haskell2010
+
+test-suite clarifai-test
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  other-modules:       InputsTests
+  main-is:             Spec.hs
+  build-depends:       base
+                     , clarifai
+                     , HUnit
+                     , aeson
+                     , lens
+                     , text
+                     , unordered-containers
+                     , vector
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 
 executable predictions-exe
