@@ -5,7 +5,7 @@ module Network.Clarifai.V2.Types.Base
   -- * Base API Types
   APIKey(..)
   -- ** ClarifaiT monad transformer
-, ClarifaiT
+, ClarifaiT(..)
 , ClarifaiIO
 , runClarifaiT
 ) where
@@ -13,23 +13,16 @@ module Network.Clarifai.V2.Types.Base
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Reader
 import qualified Data.ByteString            as BS
--- import qualified Data.ByteString.Lazy       as BL
 import           Data.Char
--- import qualified Data.Text                  as T (unpack)
--- import           Data.Text.Conversions
+import           Data.String
 
 -- | newtype wrapper around Clarifai API keys.
 newtype APIKey = APIKey {
     unAPIkey :: BS.ByteString
   }
 
--- instance FromText APIKey where
---   fromText = APIKey . BS.pack . map (fromIntegral . ord) . T.unpack
-
--- -- FIXME:
--- -- why is this here..?
--- instance FromText (Maybe APIKey) where
---   fromText = Just . fromText
+instance IsString APIKey where
+  fromString = APIKey . BS.pack . map (fromIntegral . ord)
 
 -- | ClarifaiT monad transformer used for running requests.
 newtype ClarifaiT m a = ClarifaiT {

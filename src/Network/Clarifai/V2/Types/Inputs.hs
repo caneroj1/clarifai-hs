@@ -69,6 +69,7 @@ data Input = Input {
   , _inputId        :: Maybe Text -- ^ Optional 'Text' identifier for this image.
   , _concepts       :: [Concept]  -- ^ A list of 'Concept's that are contained in the image.
   , _allowDuplicate :: Bool       -- ^ 'Bool' parameter indicating whether or not Clarifai should allow duplicate inputs.
+                                  -- If an input identifier is specified, that must still be unique.
   , _image          :: Image      -- ^ The actual 'Image' parameter for this 'Input'.
   }
 makeLenses ''Input
