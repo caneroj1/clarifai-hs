@@ -1,0 +1,17 @@
+{
+  "id": "TestIdentifier",
+  "data": {
+    "image": {
+      "url": "http://my.image.com"
+    },
+    "metadata": {
+      "name": "Costes Restaurant"
+    }
+  },
+  "created_at": "2017-07-25T00:48:46.184625Z",
+  "modified_at": "2017-07-25T00:48:46.672809Z",
+  "status": {
+    "code": 30000,
+    "description": "Download complete"
+  }
+}

@@ -4,7 +4,10 @@ module Main where
 
 import           Control.Lens                     hiding ((.=))
 import           Data.Aeson
+import qualified Data.ByteString.Base64.Lazy      as BS
+import qualified Data.ByteString.Lazy             as BL
 import           Data.String
+import           Data.Text.Conversions
 import           Network.Clarifai.V2.API.Inputs
 import           Network.Clarifai.V2.Types.Base
 import           Network.Clarifai.V2.Types.Inputs
@@ -12,11 +15,12 @@ import           System.Environment
 
 main = do
   k <- fromString <$> apiKey
-  print =<< runClarifaiT (addInputs inputs) k
+  b <- Base64 <$> BL.readFile "./examples/inputs/img/burger.jpg"
+  print =<< runClarifaiT (addInputs $ inputs b) k
   where apiKey = getEnv "CLARIFAIAPIKEY"
 
-inputs :: [Input]
-inputs = [
+inputs :: Base64 BL.ByteString -> [Input]
+inputs b = [
     input (Url "https://www.omnihotels.com/-/media/images/hotels/homrst/restaurants/homrst-omni-homestead-resort-jeffersons-restaurant-2.jpg")
       & allowDuplicate .~ True
       & metadata .~ [
@@ -27,7 +31,7 @@ inputs = [
       & metadata .~ [
           "name" .= String "Costes Restaurant"
         ]
-  , input (Url "https://media.timeout.com/images/102600575/image.jpg")
+  , input (Image b)
       & allowDuplicate .~ True
       & inputId ?~ "MyImageIdentifier"
       & concepts .~ [
