@@ -3,9 +3,11 @@
 module Main where
 
 import           Control.Lens                     hiding ((.=))
+import           Control.Monad.IO.Class
 import           Data.Aeson
 import qualified Data.ByteString.Base64.Lazy      as BS
 import qualified Data.ByteString.Lazy             as BL
+import qualified Data.List.NonEmpty               as L
 import           Data.String
 import           Data.Text.Conversions
 import           Network.Clarifai.V2.API.Inputs
@@ -16,7 +18,12 @@ import           System.Environment
 main = do
   k <- fromString <$> apiKey
   b <- Base64 <$> BL.readFile "./examples/inputs/img/burger.jpg"
-  print =<< runClarifaiT (addInputs $ inputs b) k
+  runClarifaiT (do
+      addInputs $ inputs b
+      liftIO . print =<< getInputs
+      liftIO . print =<< getInput (L.fromList "MyIageIdentifier")
+      liftIO . print =<< getInput (L.fromList "MyImageIdentifier")
+    ) k
   where apiKey = getEnv "CLARIFAIAPIKEY"
 
 inputs :: Base64 BL.ByteString -> [Input]
