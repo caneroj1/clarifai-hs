@@ -16,7 +16,6 @@ import           GHC.Generics
 import           Network.Clarifai.V2.Types.Base
 import           Network.HTTP.Client            hiding (responseBody,
                                                  responseStatus)
--- import           Network.HTTP.Types.Status
 import           Network.Wreq
 import           Network.Wreq.Lens
 
@@ -35,6 +34,15 @@ clarifaiGet url = ClarifaiT $ do
   liftIO $
     fmap (Right . body) (getWith (apiKeyOptions key) url) `catch` (return . Left . catchHttpException)
   where apiKeyOptions k = defaults & header "Authorization" .~ ["Key " <> unAPIkey k]
+
+clarifaiPatch :: (MonadIO m) => String -> Value -> ClarifaiT m ApiResponse
+clarifaiPatch url d = ClarifaiT $ do
+  key <- ask
+  liftIO $
+    fmap (Right . body) (patchWith (apiKeyOptions key) url d) `catch` (return . Left . catchHttpException)
+  where apiKeyOptions k = defaults & header "Authorization" .~ ["Key " <> unAPIkey k]
+
+patchWith = customPayloadMethodWith "PATCH"
 
 catchHttpException :: HttpException -> ApiError
 catchHttpException (InvalidUrlException url _) = BadUrl $ T.pack url

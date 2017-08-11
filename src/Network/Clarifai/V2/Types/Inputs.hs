@@ -73,6 +73,12 @@ data Concept = Concept {
   , conceptValue :: Bool -- ^ Value of the concept
   } deriving (Show, Eq)
 
+instance ToJSON Concept where
+  toJSON concept = object [
+      "id" .= conceptId concept
+    , "value" .= conceptValue concept
+    ]
+
 instance FromJSON Concept where
   parseJSON (Object o) = Concept <$>
                            o .: "id" <*>
