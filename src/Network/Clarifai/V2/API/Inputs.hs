@@ -17,6 +17,10 @@ module Network.Clarifai.V2.API.Inputs
   -- *** Deleting Concepts
 , deleteConcepts
 , deleteConceptsForInputs
+  -- ** Deleting Inputs
+, deleteInput
+, deleteInputs
+, deleteAll
 ) where
 
 import           Control.Monad
@@ -53,8 +57,8 @@ getInputs = do
 -- | Retrieve a specific input by its id. If the input does not exist,
 -- a 'NoAccess' 'ApiError' is returned.
 getInput :: (MonadIO m) => L.NonEmpty Char -> ClarifaiT m (Either ApiError SavedInput)
-getInput inputId = do
-    resp <- clarifaiGet (inputsUrl ++ "/" ++ L.toList inputId)
+getInput iid = do
+    resp <- clarifaiGet (inputsUrl ++ "/" ++ L.toList iid)
     return $ fmap (fromJust . fmap input . decode') resp
 
 -- | Add new concepts to an uploaded input.
@@ -72,6 +76,31 @@ deleteConcepts iid cs = deleteConceptsForInputs [(iid, cs)]
 -- | Batch remove concepts from many inputs.
 deleteConceptsForInputs :: (MonadIO m) => [(L.NonEmpty Char, [Concept])] -> ClarifaiT m (Either ApiError ())
 deleteConceptsForInputs = batchChangeInputs Remove
+
+-- | Delete an uploaded input.
+deleteInput :: (MonadIO m) => L.NonEmpty Char -> ClarifaiT m (Either ApiError ())
+deleteInput iid = do
+  resp <- clarifaiDelete (inputsUrl ++ "/" ++ L.toList iid) Nothing
+  return $ void resp
+
+-- | Deletes each uploaded input. The delete happens asynchronously.
+deleteInputs :: (MonadIO m) => [L.NonEmpty Char] -> ClarifaiT m (Either ApiError ())
+deleteInputs [] = return $ Right ()
+deleteInputs is = do
+  resp <- clarifaiDelete inputsUrl $ Just deleteBody
+  return $ void resp
+  where deleteBody = toObjectWithKey "ids" . toJSON $ map idToText is
+
+-- | Deletes all uploaded inputs. The delete happens asynchronously.
+deleteAll :: (MonadIO m) => ClarifaiT m (Either ApiError ())
+deleteAll = do
+  resp <- clarifaiDelete inputsUrl $ Just deleteBody
+  return $ void resp
+  where deleteBody = toObjectWithKey "delete_all" $ Bool True
+
+--------------
+-- Internal --
+--------------
 
 batchChangeInputs :: (MonadIO m) => Action -> [(L.NonEmpty Char, [Concept])] -> ClarifaiT m (Either ApiError ())
 batchChangeInputs a is = do

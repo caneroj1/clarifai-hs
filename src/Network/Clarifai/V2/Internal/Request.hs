@@ -26,14 +26,22 @@ type ApiResponse = Either ApiError BL.ByteString
 
 clarifaiPost :: (MonadIO m) => String -> Value -> ClarifaiT m (Response BL.ByteString)
 clarifaiPost url d = ClarifaiT $ ask >>= \k -> liftIO $ postWith (apiKeyOptions k) url d
-  where apiKeyOptions k = defaults & header "Authorization" .~ ["Key " <> unAPIkey k]
 
 clarifaiGet :: (MonadIO m) => String -> ClarifaiT m ApiResponse
 clarifaiGet url = ClarifaiT $ do
   key <- ask
   liftIO $
     fmap (Right . body) (getWith (apiKeyOptions key) url) `catch` (return . Left . catchHttpException)
-  where apiKeyOptions k = defaults & header "Authorization" .~ ["Key " <> unAPIkey k]
+
+clarifaiDelete :: (MonadIO m) => String -> Maybe Value -> ClarifaiT m ApiResponse
+clarifaiDelete url (Just d) = ClarifaiT $ do
+  key <- ask
+  liftIO $
+    fmap (Right . body) (deleteWithBody (apiKeyOptions key) url d) `catch` (return . Left . catchHttpException)
+clarifaiDelete url Nothing = ClarifaiT $ do
+  key <- ask
+  liftIO $
+    fmap (Right . body) (deleteWith (apiKeyOptions key) url) `catch` (return . Left . catchHttpException)
 
 clarifaiPatch :: (MonadIO m) => String -> Value -> ClarifaiT m ApiResponse
 clarifaiPatch url d = ClarifaiT $ do
@@ -42,7 +50,10 @@ clarifaiPatch url d = ClarifaiT $ do
     fmap (Right . body) (patchWith (apiKeyOptions key) url d) `catch` (return . Left . catchHttpException)
   where apiKeyOptions k = defaults & header "Authorization" .~ ["Key " <> unAPIkey k]
 
+deleteWithBody = customPayloadMethodWith "DELETE"
 patchWith = customPayloadMethodWith "PATCH"
+
+apiKeyOptions k = defaults & header "Authorization" .~ ["Key " <> unAPIkey k]
 
 catchHttpException :: HttpException -> ApiError
 catchHttpException (InvalidUrlException url _) = BadUrl $ T.pack url
