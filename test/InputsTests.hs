@@ -101,7 +101,7 @@ basicSavedInput = do
   where
     inputJSON = eitherDecode' <$> BS.readFile "./test/data/basic_input.json"
     expected =
-      Right $
+      Right
         SavedInput {
             _savedInputId = "TestIdentifier"
           , _savedInputCreatedAt = toUTC "2017-07-25T00:48:46.184625Z"
@@ -124,7 +124,7 @@ savedInputWithConcepts = do
   where
     inputJSON = eitherDecode' <$> BS.readFile "./test/data/concepts_input.json"
     expected =
-      Right $
+      Right
         SavedInput {
             _savedInputId = "TestIdentifier"
           , _savedInputCreatedAt = toUTC "2017-07-25T00:48:46.184625Z"
@@ -151,7 +151,7 @@ savedInputWithMetadata = do
   where
     inputJSON = eitherDecode' <$> BS.readFile "./test/data/metadata_input.json"
     expected =
-      Right $
+      Right
         SavedInput {
             _savedInputId = "TestIdentifier"
           , _savedInputCreatedAt = toUTC "2017-07-25T00:48:46.184625Z"
