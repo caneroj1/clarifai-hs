@@ -1,4 +1,4 @@
-module Network.Clarifai.V2.Models where
+module Network.Clarifai.V2.ClarifaiModels where
 
 -- | Data type for the various models available through Clarifai.
 data Model = -- ^ Recognize clothing, accessories, and other fashion-related items

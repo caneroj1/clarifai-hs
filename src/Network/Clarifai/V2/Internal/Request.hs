@@ -21,11 +21,18 @@ import           Network.Wreq.Lens
 
 -- Urls
 inputsUrl = "https://api.clarifai.com/v2/inputs"
+modelsUrl = "https://api.clarifai.com/v2/models"
 
 type ApiResponse = Either ApiError BL.ByteString
 
 clarifaiPost :: (MonadIO m) => String -> Value -> ClarifaiT m (Response BL.ByteString)
 clarifaiPost url d = ClarifaiT $ ask >>= \k -> liftIO $ postWith (apiKeyOptions k) url d
+
+clarifaiPost' :: (MonadIO m) => String -> Value -> ClarifaiT m ApiResponse
+clarifaiPost' url d = ClarifaiT $ do
+  key <- ask
+  liftIO $
+    fmap (Right . body) (postWith (apiKeyOptions key) url d) `catch` (return . Left . catchHttpException)
 
 clarifaiGet :: (MonadIO m) => String -> ClarifaiT m ApiResponse
 clarifaiGet url = ClarifaiT $ do
