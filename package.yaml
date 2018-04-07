@@ -1,0 +1,77 @@
+name:                clarifai
+version:             0.2.0.0
+github:              "caneroj1/clarifai"
+license:             MIT
+author:              "Joseph Canero"
+maintainer:          "jmc41493@gmail.com"
+copyright:           "Copyright (c) 2018 Joe Canero"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+synopsis:            API Client for the Clarifai API.
+category:            Web
+
+description:         Provides functionality for interacting with Clarifai's
+                     Image Tagging API. Please see the README on Github at <https://github.com/caneroj1/clarifai#README.md>
+                     for additional details.
+
+dependencies:
+- base >= 4.7 && < 5
+- aeson
+- base64-bytestring
+- bytestring
+- containers
+- data-default-class
+- easy-file
+- either
+- HTTP
+- http-client
+- http-types
+- lens
+- lens-aeson
+- scientific
+- text
+- text-conversions
+- time
+- transformers
+- unordered-containers
+- vector
+- wreq
+
+library:
+  source-dirs: src
+
+executables:
+  inputs:
+    main:                Main.hs
+    source-dirs:         apps/inputs
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - clarifai
+
+  predictions:
+    main:                Main.hs
+    source-dirs:         apps/predictions
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - clarifai
+
+tests:
+  clarifai-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - clarifai
+    - HUnit

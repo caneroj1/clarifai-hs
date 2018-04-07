@@ -34,6 +34,7 @@ import           Network.Clarifai.V2.Internal.JsonUtilities
 import           Network.Clarifai.V2.Internal.Request
 import           Network.Clarifai.V2.Types.Base
 import           Network.Clarifai.V2.Types.Inputs           hiding (input)
+import           Network.Clarifai.V2.Internal.Types
 import           Network.Wreq
 
 -- | Add inputs to the Clarifai API. Clarifai limits the number of uploads
@@ -124,12 +125,6 @@ newtype SingleInput = SingleInput {
   } deriving (Generic)
 
 instance FromJSON SingleInput where
-
--- When updating or deleting concepts, there is a specific
--- "action" value that should be sent to the API.
-data Action = Merge
-            | Remove
-  deriving (Eq, Show)
 
 instance ToJSON Action where
   toJSON Merge  = String "merge"

@@ -1,0 +1,4 @@
+{
+  "haskell.ghcMod.executablePath": "stack",
+  "haskell.ghcMod.logLevel": "log"
+}
